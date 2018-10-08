@@ -24,8 +24,8 @@ glp.decode_card = function(card){
     score_up_rate: card[8],
     score_up_time: 5,
     score_up_max_time: card[9]
-  }
-}
+  };
+};
 
 // カードの補正込み総合力を計算
 glp.get_card_power = function(card, correction){
@@ -33,18 +33,26 @@ glp.get_card_power = function(card, correction){
   //   character: [kasumi, tae, ..., misaki],
   //   band: [pop, aft, pas, ros, hel],
   //   type: [pow, coo, pur, hap],
+  //   parameter: [per, teq, vis],
   //   all: number
   // }
-  var power = card.state.reduce(function(sum, v){return sum + v;}, 0);
-  power *= 1 + correction.character[card.character] + correction.band[Math.floor(card.character/5)] + correction.type[card.type] + correction.all;
+  var states = card.state.concat();
+  states = states.map((state, idx) => {
+    var character_inputs = document.getElementsByName("character");
+    var type_inputs = document.getElementsByName("type");
+    var isParameterTarget = (parseInt(character_inputs[card.character].value, 10) > 0 && parseInt(type_inputs[card.type].value, 10) > 0);
+    return state*(1 + correction.character[card.character] + correction.band[Math.floor(card.character/5)] + correction.type[card.type] + correction.all + (isParameterTarget ? correction.parameter[idx] : 0));
+  });
+  
+  var power = states.reduce(function(sum, v){return sum + v;}, 0);
   return power;
-}
+};
 
 // 補正値を固定したときの最良バンドを計算
 glp.get_best_band = function(cards, correction, skill_notes_rate){
-  var power_array = [] //カードとその能力値を格納する配列
+  var power_array = []; //カードとその能力値を格納する配列
   for(let i = 0; i < cards.length; i++){
-    power_array.push({card: cards[i], base_power: this.get_card_power(cards[i], correction), skill_power: null, leader: false})
+    power_array.push({card: cards[i], base_power: this.get_card_power(cards[i], correction), skill_power: null, leader: false});
   }
 
   // 弱い順にソート
@@ -100,7 +108,7 @@ glp.get_best_band = function(cards, correction, skill_notes_rate){
       }
 
       // 交換した場合のバンドの生成
-      let new_band = []
+      let new_band = [];
       for(let j = 0; j < band.length; j++){
         if(j != kicked)
           new_band.push(band[j]);
@@ -148,10 +156,10 @@ glp.get_best_band = function(cards, correction, skill_notes_rate){
   });
 
   return {total: band.reduce(function(sum, v){return sum + v.base_power + v.skill_power;}, 0), band: band.reduce(function(arr, v){arr.push(v.card); return arr;}, [])};
-}
+};
 
 // 最適なアイテム配置とバンド編成を決める
-glp.get_total_best = function(cards, items, character_correction, type_correction, skill_notes_rate){
+glp.get_total_best = function(cards, items, character_correction, type_correction, parameter_correction, skill_notes_rate){
   var max_value = null;
   var max_band = null;
   var max_items = null;
@@ -186,6 +194,7 @@ glp.get_total_best = function(cards, items, character_correction, type_correctio
           }
           return sum_array;
         }, type_correction.slice(0, type_correction.length)),
+        parameter: parameter_correction,
         all: use_items.reduce(function(sum, item){
           return sum + item.all;
         }, 0),
@@ -212,7 +221,6 @@ glp.get_total_best = function(cards, items, character_correction, type_correctio
           }
           let correction = {
             character: character_correction,
-            type: type_correction,
             band: new_use_items.reduce(function(sum_array, item){
               for(let l = 0; l < sum_array.length; l++){
                 sum_array[l] += item.band[l];
@@ -225,6 +233,7 @@ glp.get_total_best = function(cards, items, character_correction, type_correctio
               }
               return sum_array;
             }, type_correction.slice(0, type_correction.length)),
+            parameter: parameter_correction,
             all: new_use_items.reduce(function(sum, item){
               return sum + item.all;
             }, 0),
@@ -246,7 +255,7 @@ glp.get_total_best = function(cards, items, character_correction, type_correctio
       break;
   }
   return {band: max_band, items: max_items};
-}
+};
 
 glp.calculate = function(){
   var cards = [];
@@ -256,12 +265,12 @@ glp.calculate = function(){
   for(let i = 0; i < cards_input.length; i++){
     if(cards_input[i].checked){
       if(this.cards[i].score_up_rate > 0){
-        let skill_level = parseInt(skill_level_input[i].value);
-        let step = Math.floor((Math.round(this.cards[i].score_up_max_time*10) - 50)/4)/10
+        let skill_level = parseInt(skill_level_input[i].value, 10);
+        let step = Math.floor((Math.round(this.cards[i].score_up_max_time*10) - 50)/4)/10;
         this.cards[i].score_up_time = 5 + step*(skill_level-1);
         let threshold = 5 - (Math.round(this.cards[i].score_up_max_time*10) - 50)%4;
         if(skill_level > threshold)
-          this.cards[i].score_up_time += 0.1*(skill_level - threshold)
+          this.cards[i].score_up_time += 0.1*(skill_level - threshold);
       }
       cards.push(this.cards[i]);
       if(character_kinds.length < 5 && character_kinds.indexOf(this.cards[i].character) < 0)
@@ -407,15 +416,21 @@ glp.calculate = function(){
   for(let i = 0; i < type_input.length; i++){
     type_correction.push(parseFloat(type_input[i].value)/100);
   }
+  
+  var parameter_input = document.getElementsByName("parameter");
+  var parameter_correction = [];
+  for(let i = 0; i < parameter_input.length; i++){
+    parameter_correction.push(parseFloat(parameter_input[i].value)/100);
+  }
 
-  var result = this.get_total_best(cards, items, character_correction, type_correction, 0.287);
+  var result = this.get_total_best(cards, items, character_correction, type_correction, parameter_correction, 0.287);
 
   var band_result = document.getElementById("band-result");
   band_result.innerHTML = "";
   for(let i = 0; i < result.band.length; i++){
     let li = document.createElement("li");
     li.style.color = this.type_colors[result.band[i].type];
-    li.innerHTML = this.character_names[result.band[i].character]+" ["+result.band[i].card_name+"]"+((i==0)?"(리더)":"");
+    li.innerHTML = this.character_names[result.band[i].character]+" ["+result.band[i].card_name+"]"+((i==0)?"(リーダー)":"");
     band_result.appendChild(li);
   }
 
@@ -428,41 +443,41 @@ glp.calculate = function(){
       items_result.appendChild(li);
     }
   }
-}
+};
 
 // 入力情報を記録する関数
 glp.save_inputs = function(){
-  if(!localStorage)
+  if(!window.localStorage)
     alert("入力内容の保存に失敗しました\nご利用のブラウザは非対応です");
   // 所持カード
   var card_data = new Array(this.cards.length);
   var cards_input = document.getElementsByName("card");
   for(let i = 0; i < cards_input.length; i++){
-    let idx = parseInt(cards_input[i].id.split("-")[1]);
+    let idx = parseInt(cards_input[i].id.split("-")[1], 10);
     card_data[idx] = cards_input[i].checked;
   }
-  localStorage.setItem("girlsBandParty_autoParty_cards", JSON.stringify(card_data));
+  window.localStorage.setItem("girlsBandParty_autoParty_cards", JSON.stringify(card_data));
 
   // スキルレベル
   var skill_data = new Array(this.cards.length);
   var skill_inputs = document.getElementsByName("skill");
   for(let i = 0; i < skill_inputs.length; i++){
-    let idx = parseInt(skill_inputs[i].id.split("-")[1]);
-    skill_data[idx] = parseInt(skill_inputs[i].value);
+    let idx = parseInt(skill_inputs[i].id.split("-")[1], 10);
+    skill_data[idx] = parseInt(skill_inputs[i].value, 10);
   }
-  localStorage.setItem("girlsBandParty_autoParty_skills", JSON.stringify(skill_data));
+  window.localStorage.setItem("girlsBandParty_autoParty_skills", JSON.stringify(skill_data));
 
   // アイテム倍率
   var items_data = [];
   for(let i = 0; i < glp.item_list.length; i++){
     let items = document.getElementsByName(glp.item_list[i]);
     for(let j = 0; j < items.length; j++){
-      let obj = {}
+      let obj = {};
       obj[items[j].id] = parseFloat(items[j].value);
       items_data.push({id: items[j].id, value: parseFloat(items[j].value)});
     }
   }
-  localStorage.setItem("girlsBandParty_autoParty_items", JSON.stringify(items_data));
+  window.localStorage.setItem("girlsBandParty_autoParty_items", JSON.stringify(items_data));
 
   // キャラ倍率
   var character_data = [];
@@ -470,23 +485,23 @@ glp.save_inputs = function(){
   for(let i = 0; i < character_inputs.length; i++){
     character_data.push(parseFloat(character_inputs[i].value));
   }
-  localStorage.setItem("girlsBandParty_autoParty_characters", JSON.stringify(character_data));
+  window.localStorage.setItem("girlsBandParty_autoParty_characters", JSON.stringify(character_data));
 
   //属性倍率
-  var type_data = []
+  var type_data = [];
   var type_inputs = document.getElementsByName("type");
   for(let i = 0; i < type_inputs.length; i++){
     type_data.push(parseFloat(type_inputs[i].value));
   }
-  localStorage.setItem("girlsBandParty_autoParty_types", JSON.stringify(type_data));
+  window.localStorage.setItem("girlsBandParty_autoParty_types", JSON.stringify(type_data));
 
   alert("입력내용을 저장 했습니다.\n다음번 페이지를 열 때 불러옵니다.");
-}
+};
 
 // 記録情報を復元する関数
 glp.restore_inputs = function(){
   // 所持カード
-  var card_data = JSON.parse(localStorage.getItem("girlsBandParty_autoParty_cards"));
+  var card_data = JSON.parse(window.localStorage.getItem("girlsBandParty_autoParty_cards"));
   if(card_data){
     for(let i = 0; i < card_data.length; i++){
       document.getElementById("card-"+i).checked = (card_data[i]) ? true : false;
@@ -494,15 +509,15 @@ glp.restore_inputs = function(){
   }
 
   // スキルレベル
-  var skill_data = JSON.parse(localStorage.getItem("girlsBandParty_autoParty_skills"));
+  var skill_data = JSON.parse(window.localStorage.getItem("girlsBandParty_autoParty_skills"));
   if(skill_data){
     for(let i = 0; i < skill_data.length; i++){
-      document.getElementById("skill-"+i).value = parseInt(skill_data[i]);
+      document.getElementById("skill-"+i).value = parseInt(skill_data[i], 10);
     }
   }
 
   // アイテム倍率
-  var items_data = JSON.parse(localStorage.getItem("girlsBandParty_autoParty_items"));
+  var items_data = JSON.parse(window.localStorage.getItem("girlsBandParty_autoParty_items"));
   if(items_data){
     for(let i = 0; i < items_data.length; i++){
       document.getElementById(items_data[i].id).value = items_data[i].value;
@@ -510,7 +525,7 @@ glp.restore_inputs = function(){
   }
 
   // キャラ倍率
-  var character_data = JSON.parse(localStorage.getItem("girlsBandParty_autoParty_characters"));
+  var character_data = JSON.parse(window.localStorage.getItem("girlsBandParty_autoParty_characters"));
   if(character_data){
     for(let i = 0; i < character_data.length; i++){
       document.getElementById("character-"+i).value = character_data[i];
@@ -518,13 +533,13 @@ glp.restore_inputs = function(){
   }
 
   //属性倍率
-  var type_data = JSON.parse(localStorage.getItem("girlsBandParty_autoParty_types"));
+  var type_data = JSON.parse(window.localStorage.getItem("girlsBandParty_autoParty_types"));
   if(type_data){
     let type_inputs = document.getElementsByName("type");
     for(let i = 0; i < type_inputs.length; i++)
       type_inputs[i].value = type_data[i];
   }
-}
+};
 
 // 所持カードの一括選択・選択解除
 glp.all_change_cards = function(rare, bool){
@@ -532,7 +547,15 @@ glp.all_change_cards = function(rare, bool){
   for(let i = 0; i < container.children.length; i++){
     container.children[i].firstChild.firstChild.checked = bool;
   }
-}
+};
+
+//
+glp.all_change_skill_level = function(rare, level){
+  var container = document.getElementById("available-rare"+rare);
+  for(let i = 0; i < container.children.length; i++){
+    container.children[i].children[1].children[1].value = level;
+  }
+};
 
 // バンド補正アイテムの一括変更
 glp.all_change_band_items = function(level){
@@ -552,14 +575,14 @@ glp.all_change_band_items = function(level){
       for(let j = 0; j < inputs.length; j++){
         for(let k = 0; k < lv_map.length; k++){
           if(inputs[j].id.search(lv_map[k].regex) == 0){
-            inputs[j].value = lv_map[k].value[level]
+            inputs[j].value = lv_map[k].value[level];
             break;
           }
         }
       }
     }
   }
-}
+};
 
 // 属性補正アイテムの一括変更
 glp.all_change_type_items = function(level){
@@ -579,18 +602,18 @@ glp.all_change_type_items = function(level){
       for(let j = 0; j < inputs.length; j++){
         for(let k = 0; k < lv_map.length; k++){
           if(inputs[j].id.search(lv_map[k].regex) == 0){
-            inputs[j].value = lv_map[k].value[level]
+            inputs[j].value = lv_map[k].value[level];
             break;
           }
         }
       }
     }
   }
-}
+};
 
 // ページ読み込み時に実行される関数
-onload = function(){
-  glp.cards = CARDS.map(glp.decode_card);
+window.onload = function(){
+  glp.cards = window.CARDS.map(glp.decode_card);
   glp.cards.sort(function(a, b){
     if(a.rare != b.rare)
       return b.rare - a.rare;
@@ -620,12 +643,12 @@ onload = function(){
     span.style.color = glp.type_colors[glp.cards[i].type];
     label.appendChild(span);
     li.appendChild(label);
-    slv_small = document.createElement("small");
+    let slv_small = document.createElement("small");
     slv_small.style.display = (glp.cards[i].score_up_rate > 0) ? "inline" : "none";
-    slv_text = document.createElement("span");
+    let slv_text = document.createElement("span");
     slv_text.innerHTML = "SLv:";
     slv_small.appendChild(slv_text);
-    slv_input = document.createElement("input");
+    let slv_input = document.createElement("input");
     slv_input.type = "number";
     slv_input.name = "skill";
     slv_input.id = "skill-"+glp.cards[i].id;
@@ -704,7 +727,7 @@ onload = function(){
   var type_items_names = [
     {ja: "유성당", en: "center"},
     {ja: "음식", en: "menu"},
-  ]
+  ];
   for(let i = 0; i < type_items_names.length; i++){
     let tr = document.createElement("tr");
     let th = document.createElement("th");
@@ -729,7 +752,7 @@ onload = function(){
   }
 
   for(let b = 0; b < band_names.length; b++){
-    container = document.getElementById(band_names[b].chain);
+    let container = document.getElementById(band_names[b].chain);
     for(let i = 0; i < 5; i++){
       let div = document.createElement("div");
       let span = document.createElement("span");
@@ -737,7 +760,7 @@ onload = function(){
       div.appendChild(span);
       let input = document.createElement("input");
       input.name = "character";
-      input.id = "character-" + (5*b+i)
+      input.id = "character-" + (5*b+i);
       input.type = "number";
       input.value = 0;
       input.min = 0;
@@ -768,6 +791,30 @@ onload = function(){
     div.appendChild(span2);
     type.appendChild(div);
   }
-
+  
+  var parameter_names = [
+    {ja: "퍼포먼스", en: "performance"},
+    {ja: "테크닉", en: "technique"},
+    {ja: "비주얼", en: "visual"}
+  ];
+  var parameters = document.getElementById("parameters");
+  for(let i = 0; i < parameter_names.length; i++){
+    let div = document.createElement("div");
+    let span = document.createElement("span");
+    span.innerHTML = parameter_names[i].ja+": ";
+    div.appendChild(span);
+    let input = document.createElement("input");
+    input.name = "parameter";
+    input.type = "number";
+    input.value = 0;
+    input.min = 0;
+    input.step = 5;
+    div.appendChild(input);
+    let span2 = document.createElement("span");
+    span2.innerHTML = "%";
+    div.appendChild(span2);
+    parameters.appendChild(div);
+  }
+  
   glp.restore_inputs();
-}
+};
