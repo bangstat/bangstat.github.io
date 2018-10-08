@@ -1,3 +1,4 @@
+<!DOCTYPE html>
 <html lang="kr">
   <head>
     <meta charset="UTF-8">
@@ -74,24 +75,44 @@
         <span class="rare-text">★★★★</span>
         <input type="button" value="모두 체크" onclick="glp.all_change_cards(4, true)">
         <input type="button" value="모두 제외" onclick="glp.all_change_cards(4, false)">
+        <input type="button" value="일괄 SLv1" onclick="glp.all_change_skill_level(4, 1)">
+        <input type="button" value="일괄 SLv2" onclick="glp.all_change_skill_level(4, 2)">
+        <input type="button" value="일괄 SLv3" onclick="glp.all_change_skill_level(4, 3)">
+        <input type="button" value="일괄 SLv4" onclick="glp.all_change_skill_level(4, 4)">
+        <input type="button" value="일괄 SLv5" onclick="glp.all_change_skill_level(4, 5)">
       </div>
       <ul id="available-rare4"></ul>
       <div>
         <span class="rare-text">★★★　</span>
         <input type="button" value="모두 체크" onclick="glp.all_change_cards(3, true)">
         <input type="button" value="모두 제외" onclick="glp.all_change_cards(3, false)">
+        <input type="button" value="일괄 SLv1" onclick="glp.all_change_skill_level(3, 1)">
+        <input type="button" value="일괄 SLv2" onclick="glp.all_change_skill_level(3, 2)">
+        <input type="button" value="일괄 SLv3" onclick="glp.all_change_skill_level(3, 3)">
+        <input type="button" value="일괄 SLv4" onclick="glp.all_change_skill_level(3, 4)">
+        <input type="button" value="일괄 SLv5" onclick="glp.all_change_skill_level(3, 5)">
       </div>
       <ul id="available-rare3"></ul>
       <div>
         <span class="rare-text">★★　　</span>
         <input type="button" value="모두 체크" onclick="glp.all_change_cards(2, true)">
         <input type="button" value="모두 제외" onclick="glp.all_change_cards(2, false)">
+        <input type="button" value="일괄 SLv1" onclick="glp.all_change_skill_level(2, 1)">
+        <input type="button" value="일괄 SLv2" onclick="glp.all_change_skill_level(2, 2)">
+        <input type="button" value="일괄 SLv3" onclick="glp.all_change_skill_level(2, 3)">
+        <input type="button" value="일괄 SLv4" onclick="glp.all_change_skill_level(2, 4)">
+        <input type="button" value="일괄 SLv5" onclick="glp.all_change_skill_level(2, 5)">
       </div>
       <ul id="available-rare2"></ul>
       <div>
         <span class="rare-text">★　　　</span>
         <input type="button" value="모두 체크" onclick="glp.all_change_cards(1, true)">
         <input type="button" value="모두 제외" onclick="glp.all_change_cards(1, false)">
+        <input type="button" value="일괄 SLv1" onclick="glp.all_change_skill_level(1, 1)">
+        <input type="button" value="일괄 SLv2" onclick="glp.all_change_skill_level(1, 2)">
+        <input type="button" value="일괄 SLv3" onclick="glp.all_change_skill_level(1, 3)">
+        <input type="button" value="일괄 SLv4" onclick="glp.all_change_skill_level(1, 4)">
+        <input type="button" value="일괄 SLv5" onclick="glp.all_change_skill_level(1, 5)">
       </div>
       <ul id="available-rare1"></ul>
     </div>
@@ -136,6 +157,9 @@
     </div>
     <div id="types" class="input-items">
       <h3>속성 배율</h3>
+    </div>
+    <div id="parameters" class="input-items">
+      <h3>パラメータ倍率(β版，キャラクター倍率と属性倍率が0%を超えるカードにのみ適用)</h3>
     </div>
     <div class="button-container">
       <input id="calculate" type="button" value="편성" onclick="glp.calculate()">
